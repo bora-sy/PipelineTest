@@ -8,16 +8,14 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  projectDir: 'ASPPipTest'
 
 steps:
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'restore'
-    projects: '**/*.csproj'
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'build'
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
-  displayName: 'dotnet build $(buildConfiguration)'
+- script: dotnet restore
+  displayName: 'Restore Dependencies'
+  workingDirectory: '$(projectDir)'
+  
+- script: dotnet build --configuration $(buildConfiguration)
+  displayName: 'Build $(buildConfiguration)'
+  workingDirectory: '$(projectDir)'
