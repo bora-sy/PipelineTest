@@ -11,6 +11,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  projectDirectory: 'ASPPipTest'
 
 steps:
 - task: DotNetCoreCLI@2
@@ -18,9 +19,11 @@ steps:
     command: 'restore'
     feedsToUse: 'select'
     vstsFeed: 'my-vsts-feed' # A series of numbers and letters
+    workingDirectory: '$(projectDirectory)'
 
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
     arguments: '--configuration $(buildConfiguration)'
+    workingDirectory: '$(projectDirectory)'
   displayName: 'dotnet build $(buildConfiguration)'
