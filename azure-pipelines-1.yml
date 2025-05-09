@@ -11,7 +11,9 @@ resources:
   pipelines:
   - pipeline: build-pipeline
     source: Build-CI
-    trigger: true
+    trigger:
+      branches:
+      - main 
       
 
 
