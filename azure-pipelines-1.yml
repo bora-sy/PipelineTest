@@ -1,4 +1,6 @@
 trigger: none
+pr: none
+
 pool:
   name: TestAg
 
@@ -10,6 +12,7 @@ resources:
     trigger:
       branches:
       - main
+      
 
 
 variables:
