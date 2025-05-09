@@ -1,0 +1,20 @@
+trigger: none
+pool:
+  name: TestAg
+
+
+resources:
+  pipelines:
+  - pipeline: build-pipeline
+    source: Build-CI
+    trigger:
+      branches:
+      - main
+
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- script: echo 'DEPLOY!!'
+  displayName: 'TEST'
