@@ -23,8 +23,6 @@ namespace ASPPipTest
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
-
             app.UseAuthorization();
 
 

@@ -1,4 +1,4 @@
-@ASPPipTest_HostAddress = http://localhost:5198
+@ASPPipTest_HostAddress = http://localhost:5101
 
 GET {{ASPPipTest_HostAddress}}/weatherforecast/
 Accept: application/json
