@@ -23,16 +23,17 @@ steps:
     source ${dockerFuncsPath}
     
     # Load current version from the version file if it exists
-    if [ -f "$versionPath" ]; then
-      CURR_VERSION=$(cat "$versionPath")
-    else
-      CURR_VERSION=5  # Default version if file does not exist
-    fi
+    #if [ -f "$versionPath" ]; then
+    #  CURR_VERSION=$(cat "$versionPath")
+    #else
+    #  CURR_VERSION=5  # Default version if file does not exist
+    #fi
     
     # Save the current version to the version file (before doing any operations)
-    echo "$CURR_VERSION" > "$versionPath"
+    #echo "$CURR_VERSION" > "$versionPath"
     
     # Calculate the old version
+    CURR_VERSION=2
     OLD_VERSION=$((CURR_VERSION - 1))
     
     # Build the new Docker image
@@ -75,10 +76,9 @@ steps:
     fi
     
     # Increment the current version for next use
-    CURR_VERSION=$((CURR_VERSION + 1))
+    #CURR_VERSION=$((CURR_VERSION + 1))
     
     # Save the updated version to the version file
-    echo "$CURR_VERSION" > "$versionPath"
-
+    #echo "$CURR_VERSION" > "$versionPath"
 
   displayName: 'TEST'
