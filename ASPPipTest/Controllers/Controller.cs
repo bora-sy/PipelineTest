@@ -25,7 +25,7 @@ namespace ASPPipTest.Controllers
             return Ok("hmmm");
         }
         
-        [HttpGet("health")]
+        [HttpGet("healthz")]
         public async Task<IActionResult> Health()
         {
             return Ok("hello tehre");
