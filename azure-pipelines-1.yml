@@ -73,8 +73,8 @@ stages:
 
     - script: |
         echo "Stopping Container B..."
-        docker stop $(containerNameB)
-      displayName: Stop Container B
+        docker stop $(containerNameB) 2>/dev/null || true
+      displayName: Stop Container B (if running)
 
     - script: |
         echo "Removing Container B..."
