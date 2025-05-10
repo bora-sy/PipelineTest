@@ -3,6 +3,8 @@ namespace ASPPipTest
 {
     public class Program
     {
+        public static readonly DateTime AppBegin = DateTime.UtcNow;
+
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
