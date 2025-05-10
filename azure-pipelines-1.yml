@@ -38,75 +38,71 @@ stages:
       displayName: Build Docker Image
 
     - script: |
-        echo "Stopping and removing existing containers (if any)..."
+        echo "Stopping Container A..."
         docker stop $(containerNameA) 2>/dev/null || true
-        docker rm $(containerNameA) 2>/dev/null || true
-        docker stop $(containerNameB) 2>/dev/null || true
-        docker rm $(containerNameB) 2>/dev/null || true
-      displayName: Stop and Remove Old Containers
+      displayName: Stop Container A (if running)
 
     - script: |
-        echo "Creating Container A..."
-        docker create --name $(containerNameA) -p $(hostPortA):$(containerPort) $(tag)
-        echo "Starting Container A..."
-        docker start $(containerNameA)
+        echo "Removing Container A..."
+        docker rm $(containerNameA) 2>/dev/null || true
+      displayName: Remove Container A (if exists)
+
+    - script: |
+        echo "Creating and Starting new Container A..."
+        docker run -d --name $(containerNameA) -p $(hostPortA):$(containerPort) $(tag)
       displayName: Create and Start Container A
 
     - script: |
-        echo "Waiting for Container A to become healthy..."
-        HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortA)$(healthCheckEndpoint))
+        echo "Waiting for new Container A to become healthy..."
+        HEALTH_STATUS_A=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortA)$(healthCheckEndpoint))
         START_TIME=$(date +%s)
-        while [ "$HEALTH_STATUS" -ne "200" ]; do
+        while [ "$HEALTH_STATUS_A" -ne "200" ]; do
           CURRENT_TIME=$(date +%s)
           ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
           if [ "$ELAPSED_TIME" -ge "$(healthCheckTimeout)" ]; then
-            echo "Health check for Container A timed out."
+            echo "Health check for new Container A timed out."
             exit 1
           fi
-          echo "Container A health status: $HEALTH_STATUS. Waiting $(healthCheckInterval) seconds..."
+          echo "New Container A health status: $HEALTH_STATUS_A. Waiting $(healthCheckInterval) seconds..."
           sleep $(healthCheckInterval)
-          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortA)$(healthCheckEndpoint))
+          HEALTH_STATUS_A=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortA)$(healthCheckEndpoint))
         done
-        echo "Container A is healthy."
-      displayName: Health Check Container A (HTTP Request)
+        echo "New Container A is healthy."
+      displayName: Health Check New Container A
 
     - script: |
-        echo "Creating Container B..."
-        docker create --name $(containerNameB) -p $(hostPortB):$(containerPort) $(tag)
-        echo "Starting Container B..."
-        docker start $(containerNameB)
+        echo "Stopping Container B..."
+        docker stop $(containerNameB)
+      displayName: Stop Container B
+
+    - script: |
+        echo "Removing Container B..."
+        docker rm $(containerNameB)
+      displayName: Remove Container B
+
+    - script: |
+        echo "Creating and Starting new Container B..."
+        docker run -d --name $(containerNameB) -p $(hostPortB):$(containerPort) $(tag)
       displayName: Create and Start Container B
 
     - script: |
-        echo "Waiting for Container B to become healthy..."
-        HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
+        echo "Waiting for new Container B to become healthy..."
+        HEALTH_STATUS_B=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
         START_TIME=$(date +%s)
-        while [ "$HEALTH_STATUS" -ne "200" ]; do
+        while [ "$HEALTH_STATUS_B" -ne "200" ]; do
           CURRENT_TIME=$(date +%s)
           ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
           if [ "$ELAPSED_TIME" -ge "$(healthCheckTimeout)" ]; then
-            echo "Health check for Container B timed out."
+            echo "Health check for new Container B timed out."
             exit 1
           fi
-          echo "Container B health status: $HEALTH_STATUS. Waiting $(healthCheckInterval) seconds..."
+          echo "New Container B health status: $HEALTH_STATUS_B. Waiting $(healthCheckInterval) seconds..."
           sleep $(healthCheckInterval)
-          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
+          HEALTH_STATUS_B=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
         done
-        echo "Container B is healthy."
-      displayName: Health Check Container B (HTTP Request)
+        echo "New Container B is healthy."
+      displayName: Health Check New Container B
 
     - script: |
-        echo "Stopping and removing Container A..."
-        docker stop $(containerNameA)
-        docker rm $(containerNameA)
-      displayName: Stop and Remove Container A
-
-    - script: |
-        echo "Ensuring Container B is healthy before completing..."
-        HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
-        if [ "$HEALTH_STATUS" -ne "200" ]; then
-          echo "Container B is not healthy after update. Deployment failed."
-          exit 1
-        fi
-        echo "Deployment successful with Container B running."
-      displayName: Final Health Check B (HTTP Request)
+        echo "Deployment successful with both containers running."
+      displayName: Deployment Complete
