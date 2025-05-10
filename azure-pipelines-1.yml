@@ -23,6 +23,7 @@ variables:
   healthCheckInterval: '5' # Seconds between health checks
   healthCheckTimeout: '30' # Maximum seconds to wait for a healthy status
   projectFolder: 'ASPPipTest' # Define your project folder
+  previousBuildId: $[counter(variables['Build.BuildId'], -1)] # Get the previous build ID
 
 stages:
 - stage: DeployDev
@@ -77,8 +78,8 @@ stages:
 
     - script: |
         echo "Removing Container B..."
-        docker rm $(containerNameB)
-      displayName: Remove Container B
+        docker rm $(containerNameB) 2>/dev/null || true
+      displayName: Remove Container B (if exists)
 
     - script: |
         echo "Creating and Starting new Container B..."
@@ -104,5 +105,24 @@ stages:
       displayName: Health Check New Container B
 
     - script: |
-        echo "Deployment successful with both containers running."
-      displayName: Deployment Complete
+        echo "Checking health of Container A..."
+        HEALTH_STATUS_A_FINAL=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortA)$(healthCheckEndpoint))
+        if [ "$HEALTH_STATUS_A_FINAL" -ne "200" ]; then
+          echo "Final health check for Container A failed. Status code: $HEALTH_STATUS_A_FINAL"
+          exit 1
+        fi
+        echo "Container A is healthy."
+
+        echo "Checking health of Container B..."
+        HEALTH_STATUS_B_FINAL=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
+        if [ "$HEALTH_STATUS_B_FINAL" -ne "200" ]; then
+          echo "Final health check for Container B failed. Status code: $HEALTH_STATUS_B_FINAL"
+          exit 1
+        fi
+        echo "Container B is healthy."
+      displayName: Final Health Check Both Containers
+
+    - script: |
+        echo "Attempting to delete the previous Docker image with build ID: $(previousBuildId)"
+        docker rmi "dev-$(previousBuildId)" 2>/dev/null || echo "Previous image not found or could not be deleted."
+      displayName: Delete Previous Docker Image
