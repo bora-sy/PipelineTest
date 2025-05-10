@@ -123,6 +123,6 @@ stages:
       displayName: Final Health Check Both Containers
 
     - script: |
-        echo "Attempting to delete the previous Docker image with build ID: $(previousBuildId)"
-        docker rmi "dev-$(previousBuildId)" 2>/dev/null || echo "Previous image not found or could not be deleted."
-      displayName: Delete Previous Docker Image
+        echo "Attempting to prune unused docker images"
+        docker image prune -a -f
+      displayName: Prune Unused Docker Images
