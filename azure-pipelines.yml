@@ -11,11 +11,7 @@ variables:
   projectDir: 'ASPPipTest'
 
 steps:
-
-- script: dotnet restore
-  displayName: 'Restore Dependencies'
-  workingDirectory: '$(projectDir)'
   
-- script: dotnet build --configuration $(buildConfiguration)
+- script: echo "BUILD"
   displayName: 'Build $(buildConfiguration)'
   workingDirectory: '$(projectDir)'
