@@ -13,7 +13,7 @@ variables:
   hostPortA: '1286'
   hostPortB: '1287'
   containerPort: '8080'
-  healthCheckEndpoint: '/health'
+  healthCheckEndpoint: '/healthz'
   healthCheckInterval: '5' # Seconds between health checks
   healthCheckTimeout: '30' # Maximum seconds to wait for a healthy status
   projectFolder: 'ASPPipTest' # Define your project folder
