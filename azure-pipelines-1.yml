@@ -5,7 +5,6 @@ pr: none
 pool:
   name: TestAg
 
-
 resources:
   pipelines:
   - pipeline: build-pipeline
@@ -15,10 +14,71 @@ resources:
       - main 
       
 
-
 variables:
-  buildConfiguration: 'Release'
+  dockerFuncsPath: "/home/master/docker-functions.sh"
+  versionPath: "/home/master/version.txt"
 
 steps:
-- script: echo 'DEPLOY!!'
+- script: |
+    source ${dockerFuncsPath}
+    
+    # Load current version from the version file if it exists
+    if [ -f "$versionPath" ]; then
+      CURR_VERSION=$(cat "$versionPath")
+    else
+      CURR_VERSION=5  # Default version if file does not exist
+    fi
+    
+    # Save the current version to the version file (before doing any operations)
+    echo "$CURR_VERSION" > "$versionPath"
+    
+    # Calculate the old version
+    OLD_VERSION=$((CURR_VERSION - 1))
+    
+    # Build the new Docker image
+    docker build -f Dockerfile -t backend:${CURR_VERSION} .
+    
+    # Create containers for the new version
+    docker create --name Backend_B_${CURR_VERSION} -p 1287:8080 backend:${CURR_VERSION}
+    docker create --name Backend_A_${CURR_VERSION} -p 1286:8080 backend:${CURR_VERSION}
+    
+    # Stop and start containers for old and new versions
+    if container_exists "Backend_B_${OLD_VERSION}"; then
+      echo "Container B exists. Stopping B..."
+      docker stop Backend_B_${OLD_VERSION}
+    fi
+    
+    docker start Backend_B_${CURR_VERSION}
+    
+    if container_exists "Backend_A_${OLD_VERSION}"; then
+      echo "Container A exists. Stopping A..."
+      docker stop Backend_A_${OLD_VERSION}
+    fi
+    
+    docker start Backend_A_${CURR_VERSION}
+    
+    # Remove old containers
+    if container_exists "Backend_B_${OLD_VERSION}"; then
+      echo "Deleting old container B"
+      docker rm Backend_B_${OLD_VERSION}
+    fi
+    
+    if container_exists "Backend_A_${OLD_VERSION}"; then
+      echo "Deleting old container A"
+      docker rm Backend_A_${OLD_VERSION}
+    fi
+    
+    # Remove old image if it exists
+    if image_exists "backend:${OLD_VERSION}"; then
+      echo "Old image found. Deleting..."
+      docker rmi backend:${OLD_VERSION}
+    fi
+    
+    # Increment the current version for next use
+    CURR_VERSION=$((CURR_VERSION + 1))
+    
+    # Save the updated version to the version file
+    echo "$CURR_VERSION" > "$versionPath"
+
+
   displayName: 'TEST'
