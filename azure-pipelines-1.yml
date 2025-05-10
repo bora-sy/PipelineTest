@@ -1,9 +1,5 @@
 trigger: none
- 
 pr: none
-
-pool:
-  name: TestAg
 
 resources:
   pipelines:
@@ -11,74 +7,102 @@ resources:
     source: Build-CI
     trigger:
       branches:
-      - main 
-      
+      - main
+
+pool:
+  name: TestAg
 
 variables:
-  dockerFuncsPath: "/home/master/docker-functions.sh"
-  versionPath: "/home/master/version.txt"
+  tag: 'dev-$(Build.BuildId)'
+  containerNameA: 'containerA'
+  containerNameB: 'containerB'
+  hostPortA: '1286'
+  hostPortB: '1287'
+  containerPort: '8080'
+  healthCheckEndpoint: '/health' # Assuming you have a /health endpoint in your API
+  healthCheckInterval: '5' # Seconds between health checks
+  healthCheckTimeout: '30' # Maximum seconds to wait for a healthy status
+  projectFolder: 'ASPPipTest' # Define your project folder
 
-steps:
-- script: |
-    source ${dockerFuncsPath}
-    
-    # Load current version from the version file if it exists
-    #if [ -f "$versionPath" ]; then
-    #  CURR_VERSION=$(cat "$versionPath")
-    #else
-    #  CURR_VERSION=5  # Default version if file does not exist
-    #fi
-    
-    # Save the current version to the version file (before doing any operations)
-    #echo "$CURR_VERSION" > "$versionPath"
-    
-    # Calculate the old version
-    CURR_VERSION=2
-    OLD_VERSION=$((CURR_VERSION - 1))
-    
-    # Build the new Docker image
-    docker build -f Dockerfile -t backend:${CURR_VERSION} .
-    
-    # Create containers for the new version
-    docker create --name Backend_B_${CURR_VERSION} -p 1287:8080 backend:${CURR_VERSION}
-    docker create --name Backend_A_${CURR_VERSION} -p 1286:8080 backend:${CURR_VERSION}
-    
-    # Stop and start containers for old and new versions
-    if container_exists "Backend_B_${OLD_VERSION}"; then
-      echo "Container B exists. Stopping B..."
-      docker stop Backend_B_${OLD_VERSION}
-    fi
-    
-    docker start Backend_B_${CURR_VERSION}
-    
-    if container_exists "Backend_A_${OLD_VERSION}"; then
-      echo "Container A exists. Stopping A..."
-      docker stop Backend_A_${OLD_VERSION}
-    fi
-    
-    docker start Backend_A_${CURR_VERSION}
-    
-    # Remove old containers
-    if container_exists "Backend_B_${OLD_VERSION}"; then
-      echo "Deleting old container B"
-      docker rm Backend_B_${OLD_VERSION}
-    fi
-    
-    if container_exists "Backend_A_${OLD_VERSION}"; then
-      echo "Deleting old container A"
-      docker rm Backend_A_${OLD_VERSION}
-    fi
-    
-    # Remove old image if it exists
-    if image_exists "backend:${OLD_VERSION}"; then
-      echo "Old image found. Deleting..."
-      docker rmi backend:${OLD_VERSION}
-    fi
-    
-    # Increment the current version for next use
-    #CURR_VERSION=$((CURR_VERSION + 1))
-    
-    # Save the updated version to the version file
-    #echo "$CURR_VERSION" > "$versionPath"
+stages:
+- stage: DeployDev
+  jobs:
+  - job: RollingUpdate
+    steps:
+    - checkout: self
+      displayName: Checkout Code
 
-  displayName: 'TEST'
+    - script: |
+        echo "Building Docker image from $(projectFolder)..."
+        docker build -f $(projectFolder)/Dockerfile -t $(tag) $(projectFolder)
+      displayName: Build Docker Image
+
+    - script: |
+        echo "Stopping and removing existing containers (if any)..."
+        docker stop $(containerNameA) 2>/dev/null || true
+        docker rm $(containerNameA) 2>/dev/null || true
+        docker stop $(containerNameB) 2>/dev/null || true
+        docker rm $(containerNameB) 2>/dev/null || true
+      displayName: Stop and Remove Old Containers
+
+    - script: |
+        echo "Starting Container A..."
+        docker run -d --name $(containerNameA) -p $(hostPortA):$(containerPort) $(tag)
+      displayName: Start Container A
+
+    - script: |
+        echo "Waiting for Container A to become healthy..."
+        HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortA)$(healthCheckEndpoint))
+        START_TIME=$(date +%s)
+        while [ "$HEALTH_STATUS" -ne "200" ]; do
+          CURRENT_TIME=$(date +%s)
+          ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
+          if [ "$ELAPSED_TIME" -ge "$(healthCheckTimeout)" ]; then
+            echo "Health check for Container A timed out."
+            exit 1
+          fi
+          echo "Container A health status: $HEALTH_STATUS. Waiting $(healthCheckInterval) seconds..."
+          sleep $(healthCheckInterval)
+          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortA)$(healthCheckEndpoint))
+        done
+        echo "Container A is healthy."
+      displayName: Health Check Container A
+
+    - script: |
+        echo "Starting Container B..."
+        docker run -d --name $(containerNameB) -p $(hostPortB):$(containerPort) $(tag)
+      displayName: Start Container B
+
+    - script: |
+        echo "Waiting for Container B to become healthy..."
+        HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
+        START_TIME=$(date +%s)
+        while [ "$HEALTH_STATUS" -ne "200" ]; do
+          CURRENT_TIME=$(date +%s)
+          ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
+          if [ "$ELAPSED_TIME" -ge "$(healthCheckTimeout)" ]; then
+            echo "Health check for Container B timed out."
+            exit 1
+          fi
+          echo "Container B health status: $HEALTH_STATUS. Waiting $(healthCheckInterval) seconds..."
+          sleep $(healthCheckInterval)
+          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
+        done
+        echo "Container B is healthy."
+      displayName: Health Check Container B
+
+    - script: |
+        echo "Stopping and removing Container A..."
+        docker stop $(containerNameA)
+        docker rm $(containerNameA)
+      displayName: Stop and Remove Container A
+
+    - script: |
+        echo "Ensuring Container B is healthy before completing..."
+        HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(hostPortB)$(healthCheckEndpoint))
+        if [ "$HEALTH_STATUS" -ne "200" ]; then
+          echo "Container B is not healthy after update. Deployment failed."
+          exit 1
+        fi
+        echo "Deployment successful with Container B running."
+      displayName: Final Health Check B

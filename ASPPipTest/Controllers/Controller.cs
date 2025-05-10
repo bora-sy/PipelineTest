@@ -24,5 +24,11 @@ namespace ASPPipTest.Controllers
         {
             return Ok("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         }
+        
+        [HttpGet("health")]
+        public async Task<IActionResult> Health()
+        {
+            return Ok("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        }
     }
 }
