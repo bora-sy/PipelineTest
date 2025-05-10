@@ -1,13 +1,7 @@
-trigger: none
-pr: none
+trigger:
+ - main
 
-resources:
-  pipelines:
-  - pipeline: build-pipeline
-    source: Build-CI
-    trigger:
-      branches:
-      - main
+pr: none
 
 pool:
   name: TestAg
