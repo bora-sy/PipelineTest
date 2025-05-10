@@ -22,13 +22,13 @@ namespace ASPPipTest.Controllers
         [HttpGet("")]
         public async Task<IActionResult> G()
         {
-            return Ok("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+            return Ok("hmmm");
         }
         
         [HttpGet("health")]
         public async Task<IActionResult> Health()
         {
-            return Ok("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+            return Ok("hello tehre");
         }
     }
 }
